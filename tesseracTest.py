@@ -15,69 +15,89 @@ text: ['text', 'text'...]
 }
 '''
 
+# [texto encontrado, x, y, altura, ancho]
+datos_solicitud = {
+    "SOLICITUD DE INTERCONSULTA O DERIVACIÓN": {
+        "SOLICITUD DE INTERCONSULTA O DERIVACIÓN": ["", 0, 0, 0, 0],
+        "N° Folio": ["", 0, 0, 0, 0],
+        "N° de Orden": ["", 0, 0, 0, 0],
+        "Fecha Solicitud": ["", 0, 0, 0, 0],
+        "Servicio de Salud": ["", 0, 0, 0, 0],
+        "Establecimiento": ["", 0, 0, 0, 0]
+    },
+    "DATOS DEL [DE LA] PACIENTE": {
+        "DATOS DEL [DE LA] PACIENTE": ["", 0, 0, 0, 0],
+        "Primer Apellido": ["", 0, 0, 0, 0],
+        "Segundo Apellido": ["", 0, 0, 0, 0],
+        "Nombres": ["", 0, 0, 0, 0],
+        "RUN": ["", 0, 0, 0, 0],
+        "Si es recién nacido, RUN de padre o madre beneficiario": ["", 0, 0, 0, 0],
+        "Número de Ficha": ["", 0, 0, 0, 0],
+        "Sexo": ["", 0, 0, 0, 0],
+        "Fecha de Nacimiento": ["", 0, 0, 0, 0],
+        "Edad": ["", 0, 0, 0, 0],
+        "Domicilio (calle, número, número interior, bloque (block), villa, localidad": ["", 0, 0, 0, 0],
+        "Comuna de residencia": ["", 0, 0, 0, 0],
+        "Teléfono": ["", 0, 0, 0, 0],
+        "Teléfono Móvil": ["", 0, 0, 0, 0],
+        "Teléfono Laboral": ["", 0, 0, 0, 0],
+        "Teléfono Contacto": ["", 0, 0, 0, 0],
+        "Nombre Padre": ["", 0, 0, 0, 0],
+        "Nombre Madre": ["", 0, 0, 0, 0]
+    },
+    "DATOS CLINICOS": {
+        "DATOS CLINICOS":["", 0, 0, 0, 0],
+        "Se deriva para atención en": ["", 0, 0, 0, 0],
+        "Servicio": ["", 0, 0, 0, 0],
+        "Especialidad": ["", 0, 0, 0, 0],
+        "Se envía a consulta para": ["", 0, 0, 0, 0],
+        "Hipótesis diagnóstica o diagnóstico": ["", 0, 0, 0, 0],
+        "Especificar problema": ["", 0, 0, 0, 0],
+        "Prioridad": ["", 0, 0, 0, 0],
+        "Fundamentos del diagnóstico": ["", 0, 0, 0, 0],
+        "Exámenes realizados": ["", 0, 0, 0, 0],
+        "Observaciones": ["", 0, 0, 0, 0]
+    },
+    "DATOS DEL (DE LA) PROFESIONAL": {
+        "DATOS DEL (DE LA) PROFESIONAL": ["", 0, 0, 0, 0],
+        "Primer Apellido": ["", 0, 0, 0, 0],
+        "Segundo Apellido": ["", 0, 0, 0, 0],
+        "Nombres": ["", 0, 0, 0, 0],
+        "RUN": ["", 0, 0, 0, 0]
+    }
+}
 
-#Lectura de imágen y dimensiones
-
-def encontrar_superior(data, index, tope_categoria, limites_busqueda):
+def encontrar_superior(data, index, limite_superior, limites_busqueda):
+    contenido_encontrado = ""
     print("#########buscando palabra sobre:", data['text'][index], "###########")
     ancho_label = data['width'][index]
     altura_label = data['height'][index]
-    y_label = data['top'][index]
+    limite_inferior = data['top'][index] - altura_label
     x_label = data['left'][index]
     for i in range(len(data['level'])):
         if i in limites_busqueda:
-            print("Buscando:", data['text'][i], "\n altura: ", data['top'][i], "| altura_label, : ", y_label - altura_label , "| tope categoria: ", tope_categoria)
-            if (data['top'][i] < y_label - altura_label) and (data['top'][i] > tope_categoria): # Busca cualquier palabra entre el límite superior del texto y el límite inferior de la categoría.
-                superior = data['text'][i]
-    print("Palabra superior a ", data['text'][index], ": ", superior)
+            if (data['top'][i] < limite_inferior) and (data['top'][i] > limite_superior): # Busca cualquier palabra entre el límite superior del texto y el límite inferior de la categoría.
+                # if (data['left'][i]... (Entre el rango determinado para eje x))
+                contenido_encontrado = data['text'][i]
+    print("Palabra superior a ", data['text'][index], ": ", contenido_encontrado)
+
+def encontrar_ubicaciones_clave(data):
+    texto = 0
+    pos_x = 1
+    pos_y = 2
+    for id, elem in datos_solicitud.items():
+        print("id: ", id)
+        for key in elem: # Recorrido de los elementos de cada categoría.
+            #Por cada elemento queremos encontrar su valor. Para esto, primero se buscan las dimensiones de la palabra completa (Y rezamos para que se encuentre).
+            for e in data['text']:
+                if data['conf']
+                encontrada = e
+                print(encontrada)
+
+
 
 def palabras_clave(data):
-    datos_solicitud = {
-        "SOLICITUD DE INTERCONSULTA O DERIVACIÓN": {
-            "N° Folio": ["", 0, 0],
-            "N° de Orden": ["", 0, 0],
-            "Fecha Solicitud": ["", 0, 0],
-            "Servicio de Salud": ["", 0, 0],
-            "Establecimiento": ["", 0, 0]
-        },
-        "DATOS DEL [DE LA] PACIENTE": {
-            "Primer Apellido": ["", 0, 0],
-            "Segundo Apellido": ["", 0, 0],
-            "Nombres": ["", 0, 0],
-            "RUN": ["", 0, 0],
-            "Si es recién nacido, RUN de padre o madre beneficiario": ["", 0, 0],
-            "Número de Ficha": ["", 0, 0],
-            "Sexo": ["", 0, 0],
-            "Fecha de Nacimiento": ["", 0, 0],
-            "Edad": ["", 0, 0],
-            "Domicilio (calle, número, número interior, bloque (block), villa, localidad": ["", 0, 0],
-            "Comuna de residencia": ["", 0, 0],
-            "Teléfono": ["", 0, 0],
-            "Teléfono Móvil": ["", 0, 0],
-            "Teléfono Laboral": ["", 0, 0],
-            "Teléfono Contacto": ["", 0, 0],
-            "Nombre Padre": ["", 0, 0],
-            "Nombre Madre": ["", 0, 0]
-        },
-        "DATOS CLINICOS": {
-            "Se deriva para atención en": ["", 0, 0],
-            "Servicio": ["", 0, 0],
-            "Especialidad": ["", 0, 0],
-            "Se envía a consulta para": ["", 0, 0],
-            "Hipótesis diagnóstica o diagnóstico": ["", 0, 0],
-            "Especificar problema": ["", 0, 0],
-            "Prioridad": ["", 0, 0],
-            "Fundamentos del diagnóstico": ["", 0, 0],
-            "Exámenes realizados": ["", 0, 0],
-            "Observaciones": ["", 0, 0]
-        },
-        "DATOS DEL (DE LA) PROFESIONAL": {
-            "Primer Apellido": ["", 0, 0],
-            "Segundo Apellido": ["", 0, 0],
-            "Nombres": ["", 0, 0],
-            "RUN": ["", 0, 0]
-        }
-    }
+    pass
 
 def mostrar_datos_completos(data):
     indices_palabras_encontradas = [] #Lista de indices de palabras a revisar, todas aquellas con confianza superior a 80.
@@ -156,13 +176,19 @@ def diagrama_caja(img):
 
 
 # Primera imágen
+
+
 img = cv2.imread("SICFull.jpeg")
 data = pytesseract.image_to_data(img, config=myconfig, output_type=Output.DICT)
-diagrama_caja_texto(data, img)
+'''
 mostrar_datos_completos(data)
-
+'''
+diagrama_caja_texto(data, img)
+encontrar_ubicaciones_clave(data)
 # diagrama_caja_texto(data, img)
 
+
+# Preprocesamiento
 '''
 #Inversión de color
 inversion(img)

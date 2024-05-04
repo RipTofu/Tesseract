@@ -5,7 +5,31 @@ from pytesseract import Output
 
 myconfig = r"--psm 11 --oem 3 -l spa"
 
+'''
+data = 
+{ 
+level: [1, 2, 3, 4, 5, 5, 5...], 
+page_num: []
+...
+text: ['text', 'text'...]
+}
+'''
+
+
 #Lectura de imágen y dimensiones
+
+def encontrar_superior(data, index, tope_categoria, limites_busqueda):
+    print("#########buscando palabra sobre:", data['text'][index], "###########")
+    ancho_label = data['width'][index]
+    altura_label = data['height'][index]
+    y_label = data['top'][index]
+    x_label = data['left'][index]
+    for i in range(len(data['level'])):
+        if i in limites_busqueda:
+            print("Buscando:", data['text'][i], "\n altura: ", data['top'][i], "| altura_label, : ", y_label - altura_label , "| tope categoria: ", tope_categoria)
+            if (data['top'][i] < y_label - altura_label) and (data['top'][i] > tope_categoria): # Busca cualquier palabra entre el límite superior del texto y el límite inferior de la categoría.
+                superior = data['text'][i]
+    print("Palabra superior a ", data['text'][index], ": ", superior)
 
 def palabras_clave(data):
     datos_solicitud = {
@@ -56,9 +80,18 @@ def palabras_clave(data):
     }
 
 def mostrar_datos_completos(data):
+    indices_palabras_encontradas = [] #Lista de indices de palabras a revisar, todas aquellas con confianza superior a 80.
     for i in range(len(data['text'])):
         if float(data['conf'][i]) > 80:
             print(data['text'][i], " | Coordenadas: ", data['left'][i],"x, ", data['top'][i], "y")
+            indices_palabras_encontradas.append(i)
+    palabras_encontradas = len(indices_palabras_encontradas) # Total de palabras encontradas
+    print("Si")
+    for posicion in indices_palabras_encontradas:
+        if data['text'][posicion] == 'PACIENTE':
+            tope_superior = data['top'][posicion]
+        if data['text'][posicion] == 'Primer':
+            encontrar_superior(data, posicion, tope_superior, indices_palabras_encontradas)
 
 def refinar_letra(img):
     import numpy as np
@@ -125,10 +158,10 @@ def diagrama_caja(img):
 # Primera imágen
 img = cv2.imread("SICFull.jpeg")
 data = pytesseract.image_to_data(img, config=myconfig, output_type=Output.DICT)
-for i in data:
-    print(i)
-mostrar_datos_completos(data)
 diagrama_caja_texto(data, img)
+mostrar_datos_completos(data)
+
+# diagrama_caja_texto(data, img)
 
 '''
 #Inversión de color

@@ -2,6 +2,7 @@ import pytesseract
 import cv2
 # from matplotlib import pyplot as plt
 from pytesseract import Output
+from fuzzywuzzy import fuzz
 
 myconfig = r"--psm 11 --oem 3 -l spa"
 
@@ -102,26 +103,48 @@ def encontrar_superior(data, index, limite_superior, limites_busqueda):
                 contenido_encontrado = data['text'][i]
     print("Palabra superior a ", data['text'][index], ": ", contenido_encontrado)
 
+# Evalúa si la palabra clave corresponde o no con algún valor. Retorna True si coincide en un 80% con la palabra.
+def evaluar_palabra_clave(data, index, palabra):
+    for categoria in datos_solicitud.values():
+        for i in categoria.keys():
+            if fuzz.ratio(palabra, i) > 75 and categoria[i][5] == False: # Si las palabras coinciden Y no ha sido aún encontrada:
+                print("Coincidencia encontrada!: ", palabra, "es:", i)
+                categoria[i][5] = True
+                return True
+    return False
+
+def agregar_ubicacion_clave(data, index):
+    print(datos_solicitud.values())
+
+# Encuentra la posición de los labels completos.
 def encontrar_ubicaciones_clave(data, distancia_prom):
     texto = 0
     pos_x = 1
     pos_y = 2
     # Recorrido palabras
     ind = indice_alta_certeza(data)
+    campos = 0
     oraciones = []
     oracion_act = []
     for i in ind:
-        ultima_pos = data['left'][i] + data['width'][i]
-        ultima_pos_sig = data['left'][i+1]
-        if ultima_pos_sig - ultima_pos < distancia_prom and ultima_pos_sig - ultima_pos > 0:
-            oracion_act.append(data['text'][i])
-        else:
-            oracion_act.append(data['text'][i])
-            oraciones.append(oracion_act)
-            print(oracion_act)
-            oracion_act = []
+        try:
+            ultima_pos = data['left'][i] + data['width'][i]
+            ultima_pos_sig = data['left'][i+1]
+            if ultima_pos_sig - ultima_pos < distancia_prom and ultima_pos_sig - ultima_pos > 0:
+                oracion_act.append(data['text'][i])
+            else:
+                oracion_act.append(data['text'][i])
+                oracion_act = ' '.join(oracion_act)
+                oraciones.append(oracion_act)
+                if evaluar_palabra_clave(data, i, oracion_act):
+                    campos += 1
 
-        '''
+                oracion_act = []
+        except IndexError:
+            print("Hasta aca llegamo~")
+    print("encontrados:", campos, "de 40")
+
+    '''
         if (data['top'][i] - data['top'][i+1]) < 10: # Si están en la misma línea:
              # Inicializa distancia en cero
             cont_palabras = 0 # Inicializa conteo en cero
@@ -143,7 +166,6 @@ def encontrar_ubicaciones_clave(data, distancia_prom):
 
             else:
                 palabra_act = data['text'][i]
-'''
 
     # Recorrido de llaves del diccionario
     for id, elem in datos_solicitud.items():
@@ -152,11 +174,10 @@ def encontrar_ubicaciones_clave(data, distancia_prom):
             # Por cada elemento queremos encontrar su valor. Para esto, primero se buscan las dimensiones de la palabra completa (Y rezamos para que se encuentre).
             for e in data['text']:
                 pass
-                '''
                 if data['conf']:
                 encontrada = e
                 print(encontrada)
-'''
+    '''
 
 
 

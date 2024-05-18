@@ -17,6 +17,8 @@ page_num: []
 text: ['text', 'text'...]
 }
 '''
+# palabra, x, y, altura, ancho
+oraciones_no_clave = []
 
 # [texto encontrado, x, y, altura, ancho, encontrado_o_no]
 datos_solicitud = {
@@ -34,7 +36,7 @@ datos_solicitud = {
         "Segundo Apellido": ["", 0, 0, 0, 0, False],
         "Nombres": ["", 0, 0, 0, 0, False],
         "RUN": ["", 0, 0, 0, 0, False],
-        "Si es recién nacido, RUN de padre o madre beneficiario": ["", 0, 0, 0, 0, False],
+        "RUN Madre": ["", 0, 0, 0, 0, False],
         "Número de Ficha": ["", 0, 0, 0, 0, False],
         "Sexo": ["", 0, 0, 0, 0, False],
         "Fecha de Nacimiento": ["", 0, 0, 0, 0, False],
@@ -51,7 +53,7 @@ datos_solicitud = {
     "DATOS CLINICOS": {
         "DATOS CLINICOS":["", 0, 0, 0, 0, False],
         "Se deriva para atención en": ["", 0, 0, 0, 0, False],
-        "Servicio": ["", 0, 0, 0, 0],
+        "Servicio": ["", 0, 0, 0, 0, False],
         "Especialidad": ["", 0, 0, 0, 0, False],
         "Se envía a consulta para": ["", 0, 0, 0, 0, False],
         "Hipótesis diagnóstica o diagnóstico": ["", 0, 0, 0, 0, False],
@@ -61,8 +63,8 @@ datos_solicitud = {
         "Exámenes realizados": ["", 0, 0, 0, 0, False],
         "Observaciones": ["", 0, 0, 0, 0, False]
     },
-    "DATOS DEL (DE LA) PROFESIONAL": {
-        "DATOS DEL (DE LA) PROFESIONAL": ["", 0, 0, 0, 0, False],
+    "DATOS DEL (LA) PROFESIONAL": {
+        "DATOS DEL (LA) PROFESIONAL": ["", 0, 0, 0, 0, False],
         "Primer Apellido": ["", 0, 0, 0, 0, False],
         "Segundo Apellido": ["", 0, 0, 0, 0, False],
         "Nombres": ["", 0, 0, 0, 0, False],
@@ -71,8 +73,8 @@ datos_solicitud = {
 }
 
 
-# obtiene el promedio de las distancias del texto. El promedio de separación entre palabras para considerarse una oración conjunta.
-def distancia_promedio_entre_palabras(data):
+# obtiene el promedio de las distancias del texto. El promedio de separación entre palabras para considerarse una oración.
+def distancia_promedio_entre_palabras_x(data):
     promedio = 0
     encontrados = 0
     for i in range(len(data['level'])-1): # Por cada elemento de entre todos los datos
@@ -89,99 +91,128 @@ def distancia_promedio_entre_palabras(data):
     promedio = promedio / encontrados
     return int(promedio)
 
-def encontrar_superior(data, index, limite_superior, limites_busqueda):
-    contenido_encontrado = ""
-    print("#########buscando palabra sobre:", data['text'][index], "###########")
-    ancho_label = data['width'][index]
-    altura_label = data['height'][index]
-    limite_inferior = data['top'][index] - altura_label
-    x_label = data['left'][index]
-    for i in range(len(data['level'])):
-        if i in limites_busqueda:
-            if (data['top'][i] < limite_inferior) and (data['top'][i] > limite_superior): # Busca cualquier palabra entre el límite superior del texto y el límite inferior de la categoría.
-                # if (data['left'][i]... (Entre el rango determinado para eje x))
-                contenido_encontrado = data['text'][i]
-    print("Palabra superior a ", data['text'][index], ": ", contenido_encontrado)
+# Encuentra todos los label superiores a "y" y escoge el más cercano como el límite superior para la búsqueda. Retorna la llave del diccionario.
+def limite_superior_de_busqueda(y):
+    mas_cercano = 9999
+    llave = ""
+    for categoria in datos_solicitud.values():
+        for key, i in categoria.items():
+            if i[5]:
+                pos_y = i[2] + i[3]
+                dist = y - pos_y
+                if pos_y < y:
+                    if dist < mas_cercano:
+                        mas_cercano = pos_y
+                        llave = key
+    return llave, mas_cercano
 
-# Evalúa si la palabra clave corresponde o no con algún valor. Retorna True si coincide en un 80% con la palabra.
-def evaluar_palabra_clave(data, index, palabra):
+# Considera los valores entregados y compara con los valores de las oraciones no clave para encontrar aquellos entre los parámetros definidos.
+def encontrar_texto_superior(data, ind, lim_inferior, lim_superior, lim_x1, lim_x2):
+    for oracion in oraciones_no_clave:
+        #Palabra, x, y, alto, ancho
+        if oracion[2] > lim_superior and (oracion[2] + oracion[3]) < lim_inferior: # Límites en Y
+            for i in range(oracion[1], (oracion[1] + oracion[4])): # Todas las posiciones dentro de los límites de X
+                if (i > lim_x1 and i < lim_x2):
+                    return oracion[0]
+
+def encontrar_texto_derecha():
+    pass
+
+# (INCOMPLETO)Encuentra la palabra superior. Esta f(x) considera límites definidos. Usar de base para f(x) con dict.
+# Debe tomar todas las posiciones Y entre el punto superior del label y el inferior del label que esté arriba.
+# Considerar todos los label superiores. Cuando uno esté por encima de la distancia promedio entre palabras en Y, se marca el límite.
+def encontrar_contenido(data, distancia_prom_x, ind):
+    # Requieren encontrar el texto que está arriba
+    categorias_superior = ["DATOS DEL [DE LA] PACIENTE", "DATOS DEL (LA) PROFESIONAL"]
+    categorias_derecha = ["DATOS CLINICOS", "DATOS CLINICOS"] # Estos son más jodidos. Varían en formato dentro de la misma categoría.
+    for nombre_categoria in categorias_superior:
+        categoria = datos_solicitud[nombre_categoria]
+        for key, i in categoria.items():
+            if i[5]:
+                palabra_limite_y, limite_superior = limite_superior_de_busqueda(i[2])
+                print("buscando para:", key)
+                encontrada = encontrar_texto_superior(data, ind, i[2], limite_superior, i[1], (i[1] + i[4] + distancia_prom_x))
+                i[0] = encontrada
+                print(i)
+    for nombre_categoria in categorias_derecha:
+        categoria = datos_solicitud[nombre_categoria]
+        for key, i in categoria.items():
+            if i[5]:
+                pass
+# Evalúa si la palabra clave corresponde o no con algún valor. Retorna True si coincide en un 75% con la palabra.
+# También modifica el diccionario para almacenar los valores encontrados.
+def evaluar_palabra_clave(palabra):
     for categoria in datos_solicitud.values():
         for i in categoria.keys():
-            if fuzz.ratio(palabra, i) > 75 and categoria[i][5] == False: # Si las palabras coinciden Y no ha sido aún encontrada:
-                print("Coincidencia encontrada!: ", palabra, "es:", i)
-                categoria[i][5] = True
-                return True
-    return False
+            if fuzz.ratio(palabra, i) > 75 and not categoria[i][5]: # Si las palabras coinciden Y no ha sido aún encontrada:
+                return i
+    return None
 
-def agregar_ubicacion_clave(data, index):
-    print(datos_solicitud.values())
+# Guarda la posición del label en el diccionario.
+def agregar_ubicacion_clave(palabra, x, y, altura, ancho):
+    encontrado = False
+    for categoria in datos_solicitud.values():
+        if palabra in categoria.keys():
 
-# Encuentra la posición de los labels completos.
-def encontrar_ubicaciones_clave(data, distancia_prom):
-    texto = 0
-    pos_x = 1
-    pos_y = 2
+
+            if not(categoria[palabra][5]) and not(encontrado):
+                categoria[palabra][1] = x
+                categoria[palabra][2] = y
+                categoria[palabra][3] = altura
+                categoria[palabra][4] = ancho
+                categoria[palabra][5] = True
+                encontrado = True
+                if x < 0 or y < 0 or altura < 0 or ancho < 0:
+                    print("Cuidado! Es posible que un valor sea negativo.")
+    '''
+    print("Agregando al diccionario:", palabra)
+    for clave_principal in datos_solicitud:
+        if palabra in datos_solicitud[clave_principal]:
+            if not datos_solicitud[clave_principal][palabra][5]:
+                datos_solicitud[clave_principal][palabra][1] = x
+                datos_solicitud[clave_principal][palabra][2] = y
+                datos_solicitud[clave_principal][palabra][3] = altura
+                datos_solicitud[clave_principal][palabra][4] = ancho
+                datos_solicitud[clave_principal][palabra][5] = True
+                break
+'''
+# Encuentra la posición de los labels completos. Los une para generar estas "palabras clave", que corresponden a los 'label'
+def encontrar_ubicaciones_clave(data, distancia_prom, ind):
+    # Inicialización
+    posx_ini = data['left'][0]
+    posy_ini = data['top'][0]
+    altura = data['height'][0] # Recordar que se considera "Hacia abajo".
+
     # Recorrido palabras
-    ind = indice_alta_certeza(data)
     campos = 0
     oraciones = []
     oracion_act = []
-    for i in ind:
+    for enum, i in enumerate(ind):
         try:
             ultima_pos = data['left'][i] + data['width'][i]
-            ultima_pos_sig = data['left'][i+1]
-            if ultima_pos_sig - ultima_pos < distancia_prom and ultima_pos_sig - ultima_pos > 0:
+            ultima_pos_sig = data['left'][ind[enum+1]]
+            if (ultima_pos_sig - ultima_pos < distancia_prom) and (ultima_pos_sig - ultima_pos > 0):
                 oracion_act.append(data['text'][i])
             else:
                 oracion_act.append(data['text'][i])
+                ancho = ultima_pos - posx_ini
                 oracion_act = ' '.join(oracion_act)
                 oraciones.append(oracion_act)
-                if evaluar_palabra_clave(data, i, oracion_act):
+                encontrada = evaluar_palabra_clave(oracion_act)
+                if encontrada: # Si la oración corresponde:
+                    agregar_ubicacion_clave(encontrada, posx_ini, posy_ini, altura, ancho)
                     campos += 1
+                else:
+                    no_clave = [oracion_act, posx_ini, posy_ini, altura, ancho]
+                    oraciones_no_clave.append(no_clave)
 
                 oracion_act = []
+                posx_ini = data['left'][ind[enum+1]]
+                posy_ini = data['top'][ind[enum+1]]
+                altura = data['height'][ind[enum+1]]
         except IndexError:
-            print("Hasta aca llegamo~")
+            pass
     print("encontrados:", campos, "de 40")
-
-    '''
-        if (data['top'][i] - data['top'][i+1]) < 10: # Si están en la misma línea:
-             # Inicializa distancia en cero
-            cont_palabras = 0 # Inicializa conteo en cero
-            act = i # Establece la posicion actual
-            ultima_pos_x = data['left'][i] + data['width'][i] # Establece la ubicación en X de la última palabra
-            palabra_act = data['text'][i] # Guarda la palabra actual encontrada.
-            while distancia < distancia_prom: # Mientras la distancia sea menor a la distancia promedio entre campos (Palabras contiguas):
-                cont_palabras += 1 
-                 # Nueva distancia: toma la posicion final de la ultima palabra encontrada.
-                if distancia < distancia_prom: # Si la distancia es menor a la distancia promedio:
-                    palabra_act = palabra_act + data['text'][act + 1] # Concatena la palabra siguiente al campo.
-                act += 1 # Aumenta el indice de la palabra actual.
-
-
-            if distancia < distancia_prom:
-                palabra_act = data['text'][i] + data['text'][i+1]
-                ultima_pos_x = data['left'][i + 1] + data['width'][i + 1]
-
-
-            else:
-                palabra_act = data['text'][i]
-
-    # Recorrido de llaves del diccionario
-    for id, elem in datos_solicitud.items():
-        print("id: ", id)
-        for key in elem: # Recorrido de los elementos de cada categoría.
-            # Por cada elemento queremos encontrar su valor. Para esto, primero se buscan las dimensiones de la palabra completa (Y rezamos para que se encuentre).
-            for e in data['text']:
-                pass
-                if data['conf']:
-                encontrada = e
-                print(encontrada)
-    '''
-
-
-
-
 
 def indice_alta_certeza(data):
     indices_palabras_encontradas = [] #Lista de indices de palabras a revisar, todas aquellas con confianza superior a 80.
@@ -189,13 +220,6 @@ def indice_alta_certeza(data):
         if float(data['conf'][i]) > 80:
             indices_palabras_encontradas.append(i)
     return indices_palabras_encontradas
-
-def mostrar_datos_completos(data):
-    for posicion in indices_palabras_encontradas:
-        if data['text'][posicion] == 'PACIENTE':
-            tope_superior = data['top'][posicion]
-        if data['text'][posicion] == 'Primer':
-            encontrar_superior(data, posicion, tope_superior, indices_palabras_encontradas)
 
 '''
 Funciones de preprocesamiento
@@ -230,6 +254,7 @@ def reduccion_de_ruido(img):
 def inversion(img):
     invertido = cv2.bitwise_not(img)
     cv2.imwrite("temp/inverted.jpg", invertido)
+    return invertido
 
 def binarizacion(img):
     gris = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -238,20 +263,23 @@ def binarizacion(img):
     thresh, bnw_img = cv2.threshold(imgGris, 127, 255, cv2.THRESH_BINARY)
     cv2.imwrite("temp/bnw.jpg", bnw_img)
 
+def diagrama_encontrados(img):
+    for categoria in datos_solicitud:
+        for campo, atributos in datos_solicitud[categoria].items():
+            if atributos[-1]:  # Verifica si el campo está marcado como encontrado
+                x, y, height, width = atributos[1:5]
+                img = cv2.rectangle(img, (x, y), (x+width, y+height), (0, 255, 0), 2)
+    cv2.imshow("encontrados", img)
+    cv2.waitKey(0)
+
 def diagrama_caja_texto(data, img):  # Recibe el diccionario completo de datos
-    palabras_encontradas = 0
-    for i in range(len(data['text'])):
-        if float(data['conf'][i]) > 80:
-            print(data['text'][i], " | Coordenadas: ", data['left'][i],"x, ", data['top'][i], "y | ", data['width'][i], "ancho, ", data['height'][i], "alto.")
     for i in range(len(data['text'])):
         if float(data['conf'][i]) > 80: # Limitación del nivel de confianza
-            palabras_encontradas += 1
             (x, y, width, height) = (data['left'][i], data['top'][i], data['width'][i], data['height'][i])
             img = cv2.rectangle(img, (x, y), (x+width, y+height), (0,255,0), 2)
             img = cv2.putText(img, data['text'][i], (x, y+height+20), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 2, cv2.LINE_AA)
             print(data['text'][i])
     cv2.imshow("img", img)
-    print("encontradas:", palabras_encontradas)
     cv2.waitKey(0)
 
 def diagrama_caja(img):
@@ -266,13 +294,13 @@ def diagrama_caja(img):
 
 
 # Primera imágen
-
-
-img = cv2.imread("SICFull.jpeg")
+img = cv2.imread("alo-_1_.jpeg")
 data = pytesseract.image_to_data(img, config=myconfig, output_type=Output.DICT)
-diagrama_caja_texto(data, img)
-distancia_promedio = distancia_promedio_entre_palabras(data)
-encontrar_ubicaciones_clave(data, distancia_promedio)
+distancia_promedio = distancia_promedio_entre_palabras_x(data)
+ind = indice_alta_certeza(data)
+encontrar_ubicaciones_clave(data, distancia_promedio, ind)
+encontrar_contenido(data, distancia_promedio, ind)
+diagrama_encontrados(img)
 
 '''
 
